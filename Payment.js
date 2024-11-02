@@ -98,29 +98,35 @@ exports.createPurchasedItems = async (req, res) => {
     const { item, user } = req.query;
 
     if (!item || !user) {
-      return res.status(400).json({
-        Status: "Failed",
-        Message: "Please provide all info",
-      });
+      return res
+        .status(400)
+        .json({ Status: "Failed", Message: "Please provide all info" });
     }
 
     const items = item.split(",").map((id) => id.trim());
     const purchasedItems = items.map((itemId) => ({ item: itemId, user }));
 
+    console.log("Inserting purchased items...");
     await Purchased.insertMany(purchasedItems);
 
+    console.log("Finding user...");
     const userFind = await User.findOne({ _id: user });
-
     if (!userFind) {
-      return res.status(404).json({
-        Status: "Failed",
-        Message: "User not found",
-      });
+      return res
+        .status(404)
+        .json({ Status: "Failed", Message: "User not found" });
     }
 
     const carts = userFind.cartdata;
     const carKey = Object.keys(carts).filter((id) => carts[id] >= 1);
+
+    console.log("Finding products in cart...");
     const itemAdded = await PRODUCT.find({ ItemId: { $in: carKey } });
+    if (itemAdded.length === 0) {
+      return res
+        .status(404)
+        .json({ Status: "Failed", Message: "No products found" });
+    }
 
     for (const product of itemAdded) {
       const quantity = carts[product.ItemId];
@@ -128,13 +134,6 @@ exports.createPurchasedItems = async (req, res) => {
         { _id: product._id },
         { $inc: { sales: quantity } }
       );
-    }
-
-    if (itemAdded.length === 0) {
-      return res.status(404).json({
-        Status: "Failed",
-        Message: "No products found",
-      });
     }
 
     const data = {
@@ -169,95 +168,87 @@ exports.createPurchasedItems = async (req, res) => {
       settings: { currency: "INR" },
     };
 
-    // Calculate the total price of all items
     const totalPrice = data.products.reduce(
       (sum, product) => sum + product.total,
       0
     );
 
-    // Download the logo image
-    const logoResponse = await axios.get(data.images.logo, {
-      responseType: "arraybuffer",
-    });
-    const logoBuffer = Buffer.from(logoResponse.data, "binary");
-
-    // Create a new PDF document
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
-    const filePath = path.join(__dirname, "invoice.pdf");
-    const stream = fs.createWriteStream(filePath);
-
-    doc.pipe(stream);
-
-    // Add the logo centered
-    doc
-      .image(logoBuffer, (doc.page.width - 150) / 2, 30, { width: 150 })
-      .moveDown();
-
-    // Add the sender and client information
-    doc
-      .fontSize(12)
-      .text(`From: ${data.sender.company}`, 50, 150)
-      .text(`${data.sender.address}`, 50)
-      .text(`${data.sender.zip} ${data.sender.city}`, 50)
-      .text(`${data.sender.country}`, 50)
-      .moveDown();
-
-    doc
-      .fontSize(12)
-      .text(`To: ${data.client.company}`, 300, 150)
-      .text(`${data.client.address}`, 300)
-      .moveDown();
-
-    // Add invoice information
-    doc
-      .fontSize(12)
-      .text(`Invoice Number: ${data.information.number}`, 50, 250)
-      .text(`Date: ${data.information.date}`)
-      .moveDown();
-
-    // Add table header
-    doc
-      .fontSize(12)
-      .text("Product Name", 50, 300)
-      .text("Quantity", 250, 300)
-      .text("Price", 350, 300)
-      .text("Total", 450, 300);
-
-    // Add product details
-    let y = 320;
-    data.products.forEach((product) => {
-      doc
-        .fontSize(10)
-        .text(product.name, 50, y)
-        .text(product.quantity, 250, y)
-        .text(`${data.settings.currency} ${product.price}`, 350, y)
-        .text(`${data.settings.currency} ${product.total}`, 450, y);
-      y += 20; // Adjust vertical position for the next item
-    });
-
-    // Add the total price
-    doc
-      .fontSize(12)
-      .text("Total", 350, y)
-      .text(`${data.settings.currency} ${totalPrice}`, 450, y + 20);
-
-    // Add bottom notice
-    doc.fontSize(12).text(data.bottomNotice, 50, y + 60, { align: "center" });
-
-    // Finalize the PDF and end the stream
-    doc.end();
-
-    stream.on("finish", () => {
-      res.download(filePath, "Bill.pdf", (err) => {
-        if (err) {
-          console.error("Error sending file:", err);
-          res.status(500).json({ error: "Error sending invoice file" });
-        } else {
-          fs.unlinkSync(filePath); // Remove the file after sending
-          // Redirect to http://localhost:5173/ after download
-        }
+    try {
+      console.log("Downloading logo image...");
+      const logoResponse = await axios.get(data.images.logo, {
+        responseType: "arraybuffer",
       });
-    });
+      const logoBuffer = Buffer.from(logoResponse.data, "binary");
+
+      console.log("Creating PDF document...");
+      const doc = new PDFDocument({ size: "A4", margin: 50 });
+      const filePath = path.join(__dirname, "invoice.pdf");
+      const stream = fs.createWriteStream(filePath);
+
+      doc.pipe(stream);
+      doc
+        .image(logoBuffer, (doc.page.width - 150) / 2, 30, { width: 150 })
+        .moveDown();
+      doc
+        .fontSize(12)
+        .text(`From: ${data.sender.company}`, 50, 150)
+        .text(`${data.sender.address}`, 50)
+        .text(`${data.sender.zip} ${data.sender.city}`, 50)
+        .text(`${data.sender.country}`, 50)
+        .moveDown();
+
+      doc
+        .fontSize(12)
+        .text(`To: ${data.client.company}`, 300, 150)
+        .text(`${data.client.address}`, 300)
+        .moveDown();
+
+      doc
+        .fontSize(12)
+        .text(`Invoice Number: ${data.information.number}`, 50, 250)
+        .text(`Date: ${data.information.date}`)
+        .moveDown();
+
+      doc
+        .fontSize(12)
+        .text("Product Name", 50, 300)
+        .text("Quantity", 250, 300)
+        .text("Price", 350, 300)
+        .text("Total", 450, 300);
+
+      let y = 320;
+      data.products.forEach((product) => {
+        doc
+          .fontSize(10)
+          .text(product.name, 50, y)
+          .text(product.quantity, 250, y)
+          .text(`${data.settings.currency} ${product.price}`, 350, y)
+          .text(`${data.settings.currency} ${product.total}`, 450, y);
+        y += 20;
+      });
+
+      doc
+        .fontSize(12)
+        .text("Total", 350, y)
+        .text(`${data.settings.currency} ${totalPrice}`, 450, y + 20);
+
+      doc.fontSize(12).text(data.bottomNotice, 50, y + 60, { align: "center" });
+      doc.end();
+
+      stream.on("finish", () => {
+        res.download(filePath, "Bill.pdf", (err) => {
+          if (err) {
+            console.error("Error sending file:", err);
+            res.status(500).json({ error: "Error sending invoice file" });
+          } else {
+            fs.unlinkSync(filePath);
+          }
+        });
+      });
+    } catch (pdfError) {
+      console.error("Error during PDF generation:", pdfError);
+      res.status(500).json({ error: "Failed to generate PDF" });
+    }
   } catch (error) {
     console.error("Error generating invoice:", error);
     res.status(500).json({ error: "Internal server error" });
