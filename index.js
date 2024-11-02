@@ -11,9 +11,9 @@ const { uploadImage, uploadFile } = require("./UploadImage/upload"); // Import u
 const path = require("path");
 const app = express();
 const sendEmail = require("./Auth/Email");
+app.use(cors({ origin: "http://localhost:5173" }));
 
 app.use(express.urlencoded({ extended: false }));
-app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 const port = 8080;
