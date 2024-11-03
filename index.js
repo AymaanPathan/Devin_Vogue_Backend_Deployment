@@ -11,7 +11,9 @@ const { uploadImage, uploadFile } = require("./UploadImage/upload"); // Import u
 const path = require("path");
 const app = express();
 const sendEmail = require("./Auth/Email");
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(
+  cors({ origin: "https://devin-vogue-frontend-deployment-cgcu.vercel.app/" })
+);
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
