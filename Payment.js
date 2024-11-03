@@ -81,7 +81,7 @@ exports.createStripePayment = async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       line_items: stripeProducts,
       mode: "payment",
-      success_url: `https://devin-vogue-frontend-deployment-c.onrender.com/success/?item=${itemsParam}&user=${req.user.id}`,
+      success_url: `https://devin-vogue-frontend-deployment2w.onrender.com/success/?item=${itemsParam}&user=${req.user.id}`,
       cancel_url:
         "https://devin-vogue-frontend-deployment-c.onrender.com/payment/cancel",
       customer_email: findUser.email,
