@@ -83,7 +83,7 @@ exports.createStripePayment = async (req, res) => {
       mode: "payment",
       success_url: `https://devin-vogue-frontend-deployment2w.onrender.com/success/?item=${itemsParam}&user=${req.user.id}`,
       cancel_url:
-        "https://devin-vogue-frontend-deployment-c.onrender.com/payment/cancel",
+        "https://devin-vogue-frontend-deployment2w.onrender.com/payment/cancel",
       customer_email: findUser.email,
     });
 
