@@ -13,7 +13,7 @@ const app = express();
 const sendEmail = require("./Auth/Email");
 app.use(
   cors({
-    origin: "https://devin-vogue-frontend-deployment-c.onrender.com",
+    origin: "*",
   })
 );
 app.use(express.urlencoded({ extended: false }));
