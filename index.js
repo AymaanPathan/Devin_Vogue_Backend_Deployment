@@ -12,9 +12,10 @@ const path = require("path");
 const app = express();
 const sendEmail = require("./Auth/Email");
 app.use(
-  cors({ origin: "https://devin-vogue-frontend-deployment-cgcu.vercel.app/" })
+  cors({
+    origin: "https://devin-vogue-frontend-deployment-c.onrender.com",
+  })
 );
-
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
